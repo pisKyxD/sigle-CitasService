@@ -15,8 +15,11 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +40,16 @@ public class CitaService {
 
     public List<Cita> getByPacienteId(Long pacienteId) {
         return citaRepository.findByPacienteId(pacienteId);
+    }
+
+    public List<String> getHorasOcupadas(Long medicoId, LocalDate fecha) {
+        LocalDateTime inicio = fecha.atStartOfDay();
+        LocalDateTime fin = fecha.atTime(LocalTime.MAX);
+        List<Cita> citas = citaRepository.findByMedicoIdAndFechaHoraBetweenAndEstadoNot(
+            medicoId, inicio, fin, EstadoCita.CANCELADA);
+        return citas.stream()
+            .map(c -> c.getFechaHora().toLocalTime().toString())
+            .collect(Collectors.toList());
     }
 
     @Transactional
@@ -81,7 +94,7 @@ public class CitaService {
         evento.setPacienteId(cita.getPacienteId());
         evento.setListaEsperaId(cita.getListaEsperaId());
         evento.setMotivo(motivo);
-        
+
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.CANCELACION_ROUTING_KEY, evento);
 
         return cancelacion;
