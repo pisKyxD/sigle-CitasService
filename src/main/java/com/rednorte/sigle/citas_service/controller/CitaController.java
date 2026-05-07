@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -32,6 +33,13 @@ public class CitaController {
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<Cita>> getByPacienteId(@PathVariable Long pacienteId) {
         return ResponseEntity.ok(citaService.getByPacienteId(pacienteId));
+    }
+
+    @GetMapping("/medico/{medicoId}/horas-ocupadas")
+    public ResponseEntity<List<String>> getHorasOcupadas(
+            @PathVariable Long medicoId,
+            @RequestParam String fecha) {
+        return ResponseEntity.ok(citaService.getHorasOcupadas(medicoId, LocalDate.parse(fecha)));
     }
 
     @PostMapping("/agendar")
