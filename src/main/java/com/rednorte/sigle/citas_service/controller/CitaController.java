@@ -38,6 +38,11 @@ public class CitaController {
         return ResponseEntity.ok(citaService.getByPacienteId(pacienteId));
     }
 
+    @GetMapping("/medico/{medicoId}")
+    public ResponseEntity<List<Cita>> getByMedicoId(@PathVariable Long medicoId) {
+        return ResponseEntity.ok(citaService.getByMedicoId(medicoId));
+    }
+
     @GetMapping("/medico/{medicoId}/horas-ocupadas")
     public ResponseEntity<List<String>> getHorasOcupadas(
             @PathVariable Long medicoId,

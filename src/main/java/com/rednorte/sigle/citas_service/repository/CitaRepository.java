@@ -12,5 +12,6 @@ import java.util.List;
 @Repository
 public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> findByPacienteId(Long pacienteId);
+    List<Cita> findByMedicoId(Long medicoId);
     List<Cita> findByMedicoIdAndFechaHoraBetweenAndEstadoNot(Long medicoId, LocalDateTime inicio, LocalDateTime fin, EstadoCita estado);
 }
