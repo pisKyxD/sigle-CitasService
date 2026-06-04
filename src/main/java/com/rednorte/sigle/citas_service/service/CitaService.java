@@ -42,6 +42,10 @@ public class CitaService {
         return citaRepository.findByPacienteId(pacienteId);
     }
 
+    public List<Cita> getByMedicoId(Long medicoId) {
+        return citaRepository.findByMedicoId(medicoId);
+    }
+
     public List<String> getHorasOcupadas(Long medicoId, LocalDate fecha) {
         LocalDateTime inicio = fecha.atStartOfDay();
         LocalDateTime fin = fecha.atTime(LocalTime.MAX);
