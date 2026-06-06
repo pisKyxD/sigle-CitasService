@@ -9,6 +9,7 @@ import com.rednorte.sigle.citas_service.model.Cita;
 import com.rednorte.sigle.citas_service.model.EstadoCita;
 import com.rednorte.sigle.citas_service.model.Medico;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -30,22 +31,43 @@ public class CitaService {
     private final RabbitTemplate rabbitTemplate;
     private final MedicoService medicoService;
 
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetAll")
     public List<Cita> getAll() {
         return citaRepository.findAll();
     }
 
+    public List<Cita> fallbackGetAll(Exception e) {
+        return List.of();
+    }
+
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetById")
     public Cita getById(Long id) {
         return citaRepository.findById(id).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
     }
 
+    public Cita fallbackGetById(Long id, Exception e) {
+        throw new RuntimeException("Servicio de citas no disponible temporalmente");
+    }
+
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetByPacienteId")
     public List<Cita> getByPacienteId(Long pacienteId) {
         return citaRepository.findByPacienteId(pacienteId);
     }
 
+    public List<Cita> fallbackGetByPacienteId(Long pacienteId, Exception e) {
+        return List.of();
+    }
+
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetByMedicoId")
     public List<Cita> getByMedicoId(Long medicoId) {
         return citaRepository.findByMedicoId(medicoId);
     }
 
+    public List<Cita> fallbackGetByMedicoId(Long medicoId, Exception e) {
+        return List.of();
+    }
+
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetHorasOcupadas")
     public List<String> getHorasOcupadas(Long medicoId, LocalDate fecha) {
         LocalDateTime inicio = fecha.atStartOfDay();
         LocalDateTime fin = fecha.atTime(LocalTime.MAX);
@@ -56,7 +78,12 @@ public class CitaService {
             .collect(Collectors.toList());
     }
 
+    public List<String> fallbackGetHorasOcupadas(Long medicoId, LocalDate fecha, Exception e) {
+        return List.of();
+    }
+
     @Transactional
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackAgendarCita")
     public Cita agendarCita(Cita nuevaCita, Long medicoId) {
         Medico medico = medicoService.getById(medicoId);
         nuevaCita.setMedico(medico);
@@ -64,7 +91,12 @@ public class CitaService {
         return citaRepository.save(nuevaCita);
     }
 
+    public Cita fallbackAgendarCita(Cita nuevaCita, Long medicoId, Exception e) {
+        throw new RuntimeException("No se puede agendar la cita. Servicio no disponible temporalmente.");
+    }
+
     @Transactional
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackUpdate")
     public Cita update(Long id, Cita data, Long medicoId) {
         Cita existing = getById(id);
         if (medicoId != null) {
@@ -76,7 +108,12 @@ public class CitaService {
         return citaRepository.save(existing);
     }
 
+    public Cita fallbackUpdate(Long id, Cita data, Long medicoId, Exception e) {
+        throw new RuntimeException("No se puede actualizar la cita. Servicio no disponible temporalmente.");
+    }
+
     @Transactional
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackCancelarCita")
     public Cancelacion cancelarCita(Long idCita, String motivo, CanceladoPor por) {
         Cita cita = getById(idCita);
 
@@ -102,6 +139,10 @@ public class CitaService {
         rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.CANCELACION_ROUTING_KEY, evento);
 
         return cancelacion;
+    }
+
+    public Cancelacion fallbackCancelarCita(Long idCita, String motivo, CanceladoPor por, Exception e) {
+        throw new RuntimeException("No se puede cancelar la cita. Servicio no disponible temporalmente.");
     }
 
     public void delete(Long id) {
