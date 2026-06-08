@@ -13,6 +13,8 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,6 +58,15 @@ public class CitaService {
 
     public List<Cita> fallbackGetByPacienteId(Long pacienteId, Exception e) {
         return List.of();
+    }
+
+    @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetByPacienteIdPaginado")
+    public Page<Cita> getByPacienteIdPaginado(Long pacienteId, Pageable pageable) {
+        return citaRepository.findByPacienteId(pacienteId, pageable);
+    }
+
+    public Page<Cita> fallbackGetByPacienteIdPaginado(Long pacienteId, Pageable pageable, Exception e) {
+        return Page.empty();
     }
 
     @CircuitBreaker(name = "citasService", fallbackMethod = "fallbackGetByMedicoId")
