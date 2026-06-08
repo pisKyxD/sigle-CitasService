@@ -10,11 +10,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/citas")
@@ -36,6 +40,20 @@ public class CitaController {
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<Cita>> getByPacienteId(@PathVariable Long pacienteId) {
         return ResponseEntity.ok(citaService.getByPacienteId(pacienteId));
+    }
+
+    @GetMapping("/paciente/{pacienteId}/paginado")
+    public ResponseEntity<Map<String, Object>> getByPacienteIdPaginado(
+            @PathVariable Long pacienteId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<Cita> resultado = citaService.getByPacienteIdPaginado(pacienteId, PageRequest.of(page, size));
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", resultado.getContent());
+        response.put("totalPages", resultado.getTotalPages());
+        response.put("totalElements", resultado.getTotalElements());
+        response.put("currentPage", resultado.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/medico/{medicoId}")
