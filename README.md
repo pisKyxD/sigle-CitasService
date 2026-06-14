@@ -105,6 +105,10 @@ POST /api/citas/1/cancelar
 
 `canceladoPor` acepta: `PACIENTE`, `MEDICO`, `ADMINISTRACION`
 
+## Validaciones
+
+Los endpoints de creación/actualización validan el body con `@Valid` y anotaciones `@NotNull` / `@NotBlank` de Jakarta Validation. Peticiones con datos faltantes o inválidos devuelven `400 Bad Request` con el detalle del campo.
+
 ## RabbitMQ
 
 Al cancelar una cita se publican en el mismo `@Transactional`:
@@ -119,6 +123,21 @@ Al cancelar una cita se publican en el mismo `@Transactional`:
 | Queue | `sigle.citas.canceladas` |
 | Routing key | `citas.cancelada` |
 | Formato | JSON |
+
+## Tests
+
+```bash
+mvn test
+```
+
+Incluye tests unitarios (Mockito) para `CitaService` y `MedicoService`, y tests de integración (`MockMvc`) para `CitaController` y `MedicoController`, usando H2 en memoria.
+
+### Tests con Docker
+
+```bash
+docker build -f Dockerfile.test -t citas-tests .
+docker run --rm citas-tests
+```
 
 ## Health
 
