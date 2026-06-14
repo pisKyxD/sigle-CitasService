@@ -3,6 +3,7 @@ package com.rednorte.sigle.citas_service.controller;
 import com.rednorte.sigle.citas_service.model.Medico;
 import com.rednorte.sigle.citas_service.service.MedicoService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,12 +28,12 @@ public class MedicoController {
     }
 
     @PostMapping
-    public ResponseEntity<Medico> create(@RequestBody Medico m) {
+    public ResponseEntity<Medico> create(@Valid @RequestBody Medico m) {
         return ResponseEntity.ok(service.create(m));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Medico> update(@PathVariable Long id, @RequestBody Medico m) {
+    public ResponseEntity<Medico> update(@PathVariable Long id, @Valid @RequestBody Medico m) {
         return ResponseEntity.ok(service.update(id, m));
     }
 

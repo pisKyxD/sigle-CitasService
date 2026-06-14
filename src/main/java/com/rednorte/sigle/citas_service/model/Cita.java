@@ -1,5 +1,6 @@
 package com.rednorte.sigle.citas_service.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,13 +21,14 @@ public class Cita {
     private Long id;
 
     @Column(name = "paciente_id")
-    private Long pacienteId; // ID provisto desde fuera
+    private Long pacienteId;
 
     @Column(name = "lista_espera_id")
-    private Long listaEsperaId; // ID referencial
+    private Long listaEsperaId;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "medico_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Medico medico;
     
     private String especialidad;
