@@ -9,7 +9,7 @@ require('./models/Cancelacion');
 
 const PORT = process.env.PORT || 8082;
 
-sequelize.sync({ alter: true })
+sequelize.sync({ force: false })
   .then(() => {
     console.log('[DB] Conectado y sincronizado.');
     connect();
