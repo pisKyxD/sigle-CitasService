@@ -8,6 +8,7 @@ let channel = null;
 
 async function connect() {
   try {
+    console.log('[RabbitMQ] URL:', process.env.RABBITMQ_URL);
     const conn = await amqp.connect(process.env.RABBITMQ_URL);
     channel = await conn.createChannel();
     await channel.assertExchange(EXCHANGE, 'direct', { durable: true });
