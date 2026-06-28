@@ -1,4 +1,6 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const app = require('./app');
 const sequelize = require('./config/database');
 const { connect } = require('./config/rabbitmq');
@@ -7,7 +9,7 @@ require('./models/Medico');
 require('./models/Cita');
 require('./models/Cancelacion');
 
-const PORT = process.env.PORT || 8082;
+const PORT = process.env.PORT || 10000;
 
 sequelize.sync({ force: false })
   .then(() => {
