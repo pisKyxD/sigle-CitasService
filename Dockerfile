@@ -1,11 +1,8 @@
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+FROM node:20-alpine
 WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn clean package -DskipTests
-
-FROM eclipse-temurin:17-jdk-alpine
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+RUN npm install -g pnpm
+COPY package*.json pnpm-lock.yaml ./
+RUN pnpm install --prod
+COPY . .
 EXPOSE 10000
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["node", "src/index.js"]
