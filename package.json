@@ -17,12 +17,14 @@
   "dependencies": {
     "amqplib": "^2.0.1",
     "dotenv": "^17.4.2",
+    "eureka-js-client": "^4.5.0",
     "express": "^5.2.1",
     "mysql2": "^3.22.5",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {
     "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
     "supertest": "^7.2.2"
   },
   "jest": {
