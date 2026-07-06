@@ -16,8 +16,8 @@ const client = new Eureka({
       '@enabled': true,
     },
     vipAddress: 'citasservice',
-    statusPageUrl: `http://${INSTANCE_HOST}:${PORT}/actuator/health`,
-    healthCheckUrl: `http://${INSTANCE_HOST}:${PORT}/actuator/health`,
+    statusPageUrl: `https://${INSTANCE_HOST}/actuator/health`,
+    healthCheckUrl: `https://${INSTANCE_HOST}/actuator/health`,
     dataCenterInfo: {
       '@class': 'com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo',
       name: 'MyOwn',
@@ -27,6 +27,7 @@ const client = new Eureka({
     host: EUREKA_HOST,
     port: EUREKA_PORT,
     servicePath: '/eureka/apps/',
+    ssl: true,
   },
 });
 
