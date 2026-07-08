@@ -2,7 +2,7 @@ const request = require('supertest');
 
 jest.mock('../src/services/citaService');
 jest.mock('../src/services/medicoService');
-jest.mock('../src/config/rabbitmq', () => ({ connect: jest.fn(), publishCancelacion: jest.fn() }));
+jest.mock('../src/config/rabbitmq', () => ({ connect: jest.fn(), publishCancelacion: jest.fn(), publishCreacion: jest.fn() }));
 
 const citaService = require('../src/services/citaService');
 const medicoService = require('../src/services/medicoService');
