@@ -3,7 +3,7 @@ const Cita = require('../models/Cita');
 const Cancelacion = require('../models/Cancelacion');
 const Medico = require('../models/Medico');
 const medicoService = require('./medicoService');
-const { publishCancelacion } = require('../config/rabbitmq');
+const { publishCancelacion, publishCreacion } = require('../config/rabbitmq');
 
 const ESTADOS_VALIDOS = ['PROGRAMADA', 'CANCELADA', 'ATENDIDA', 'REPROGRAMADA'];
 const CANCELADO_POR_VALIDO = ['PACIENTE', 'MEDICO', 'ADMINISTRACION'];
@@ -67,7 +67,20 @@ const agendarCita = async (citaData, medicoId) => {
     fechaHora: citaData.fechaHora,
     estado: 'PROGRAMADA',
   });
-  return getById(cita.id);
+
+  const citaCompleta = await getById(cita.id);
+
+  // Publicar evento en RabbitMQ para notificar al paciente que su cita fue creada
+  publishCreacion({
+    citaId: citaCompleta.id,
+    pacienteId: citaCompleta.pacienteId,
+    listaEsperaId: citaCompleta.listaEsperaId,
+    especialidad: citaCompleta.especialidad,
+    fechaHora: citaCompleta.fechaHora,
+    medicoNombre: citaCompleta.medico?.nombre,
+  });
+
+  return citaCompleta;
 };
 
 const update = async (id, citaData, medicoId) => {
