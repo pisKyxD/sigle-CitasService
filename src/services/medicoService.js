@@ -8,9 +8,15 @@ const getById = async (id) => {
   return m;
 };
 
+const getByEmail = async (email) => {
+  const m = await Medico.findOne({ where: { email } });
+  if (!m) { const e = new Error('Médico no encontrado'); e.status = 404; throw e; }
+  return m;
+};
+
 const create = async (data) => {
-  if (!data.rut || !data.nombre || !data.especialidad || !data.establecimientoId) {
-    const e = new Error('rut, nombre, especialidad y establecimientoId son obligatorios');
+  if (!data.rut || !data.nombre || !data.especialidad || !data.establecimientoId || !data.email) {
+    const e = new Error('rut, nombre, especialidad, establecimientoId y email son obligatorios');
     e.status = 400; throw e;
   }
   return await Medico.create(data);
@@ -33,4 +39,4 @@ const remove = async (id) => {
   await m.destroy();
 };
 
-module.exports = { getAll, getById, create, update, remove };
+module.exports = { getAll, getById, getByEmail, create, update, remove };

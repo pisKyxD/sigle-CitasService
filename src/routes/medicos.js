@@ -2,6 +2,7 @@ const router = require('express').Router();
 const ctrl = require('../controllers/medicoController');
 
 router.get('/', ctrl.getAll);
+router.get('/email/:email', ctrl.getByEmail);
 router.get('/:id', ctrl.getById);
 router.post('/', ctrl.create);
 router.put('/:id', ctrl.update);
