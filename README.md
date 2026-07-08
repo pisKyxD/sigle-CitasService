@@ -1,22 +1,26 @@
 # Sigle-CitasService
 
-Microservicio del sistema SIGLE que maneja el ciclo de vida de las citas médicas. Cuando se cancela una cita, publica un evento en RabbitMQ para que PacientesService notifique al paciente.
+Microservicio del sistema SIGLE que maneja el ciclo de vida de las citas médicas. Publica eventos en RabbitMQ cuando una cita se agenda y cuando se cancela, para que PacientesService notifique al paciente (BD + correo).
+
+> Migrado desde Spring Boot (Java) a Node.js / Express / Sequelize.
 
 ## Stack
 
-- Java 17
-- Spring Boot 3.2.5
-- Spring Data JPA
-- Spring AMQP (RabbitMQ)
-- MySQL
-- Lombok
+- Node.js 20
+- Express 5
+- Sequelize + MySQL2
+- amqplib (RabbitMQ)
+- Eureka (registro de servicio)
+- Jest + Supertest (testing)
+- pnpm (gestor de paquetes)
 
 ## Requisitos
 
-- Java 17+
-- Maven 3.9+
+- Node.js 20+
+- pnpm (`npm install -g pnpm`)
 - MySQL corriendo
 - RabbitMQ corriendo en `localhost:5672`
+- PacientesService activo si quieres ver las notificaciones que generan estos eventos
 
 ## RabbitMQ local con Docker
 
@@ -26,33 +30,40 @@ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
 
 Consola en `http://localhost:15672` (guest / guest)
 
-## Configuración
+## Variables de entorno
 
-```properties
-server.port=8082
-spring.datasource.url=jdbc:mysql://localhost:3306/sigle_citas?createDatabaseIfNotExist=true&serverTimezone=UTC
-spring.datasource.username=root
-spring.datasource.password=tu_password
-spring.rabbitmq.host=localhost
-spring.rabbitmq.port=5672
-spring.rabbitmq.username=guest
-spring.rabbitmq.password=guest
+Copiar `.env.example` a `.env`:
+
+```env
+PORT=10000
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=sigle_citas
+DB_USER=root
+DB_PASSWORD=tu_password
+RABBITMQ_URL=amqp://guest:guest@localhost:5672
+
+EUREKA_HOST=localhost
+EUREKA_PORT=8761
+INSTANCE_HOST=localhost
 ```
 
 ## Instalación
 
+> Usa siempre `pnpm`, no `npm install` — el proyecto usa `pnpm-lock.yaml` como único lockfile. Si ves un `package-lock.json` en el repo, elimínalo (quedó de una instalación accidental con npm).
+
 ```bash
-mvn clean package -DskipTests
-java -jar target/citas-service-0.0.1-SNAPSHOT.jar
+pnpm install
+pnpm dev
 ```
 
-Disponible en `http://localhost:8082`
+Disponible en `http://localhost:10000` (o el puerto que definas en `PORT`).
 
 ## Docker
 
 ```bash
 docker build -t sigle-citas-service .
-docker run -p 8082:10000 sigle-citas-service
+docker run -p 10000:10000 sigle-citas-service
 ```
 
 ## Endpoints
@@ -61,22 +72,25 @@ docker run -p 8082:10000 sigle-citas-service
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/citas` | Todas las citas |
-| GET | `/api/citas/{id}` | Por ID |
-| GET | `/api/citas/paciente/{pacienteId}` | Citas de un paciente |
-| GET | `/api/citas/medico/{medicoId}/horas-ocupadas?fecha=YYYY-MM-DD` | Horas ocupadas del médico ese día |
-| POST | `/api/citas/agendar` | Agendar cita |
-| PUT | `/api/citas/{id}` | Actualizar |
-| POST | `/api/citas/{id}/cancelar` | Cancelar (publica evento en RabbitMQ) |
-| DELETE | `/api/citas/{id}` | Eliminar |
+| GET | `/api/citas/:id` | Por ID |
+| GET | `/api/citas/paciente/:pacienteId` | Citas de un paciente |
+| GET | `/api/citas/paciente/:pacienteId/paginado?page=&size=` | Citas de un paciente, paginadas |
+| GET | `/api/citas/medico/:medicoId` | Citas de un médico |
+| GET | `/api/citas/medico/:medicoId/horas-ocupadas?fecha=YYYY-MM-DD` | Horas ocupadas del médico ese día |
+| POST | `/api/citas/agendar` | Agendar cita (publica evento `citas.creada`) |
+| PUT | `/api/citas/:id` | Actualizar |
+| POST | `/api/citas/:id/cancelar` | Cancelar (publica evento `citas.cancelada`) |
+| DELETE | `/api/citas/:id` | Eliminar |
 
 ### Médicos
 | Método | Ruta | Descripción |
 |---|---|---|
 | GET | `/api/citas/medicos` | Todos los médicos |
-| GET | `/api/citas/medicos/{id}` | Por ID |
+| GET | `/api/citas/medicos/:id` | Por ID |
+| GET | `/api/citas/medicos/email/:email` | Por email |
 | POST | `/api/citas/medicos` | Crear |
-| PUT | `/api/citas/medicos/{id}` | Actualizar |
-| DELETE | `/api/citas/medicos/{id}` | Eliminar |
+| PUT | `/api/citas/medicos/:id` | Actualizar |
+| DELETE | `/api/citas/medicos/:id` | Eliminar |
 
 ## Ejemplos
 
@@ -105,54 +119,71 @@ POST /api/citas/1/cancelar
 
 `canceladoPor` acepta: `PACIENTE`, `MEDICO`, `ADMINISTRACION`
 
-## Validaciones
-
-Los endpoints de creación/actualización validan el body con `@Valid` y anotaciones `@NotNull` / `@NotBlank` de Jakarta Validation. Peticiones con datos faltantes o inválidos devuelven `400 Bad Request` con el detalle del campo.
-
 ## RabbitMQ
 
-Al cancelar una cita se publican en el mismo `@Transactional`:
+Este servicio es el único que publica eventos; PacientesService solo los escucha.
 
-1. La cita cambia a estado `CANCELADA`
-2. Se guarda el registro de cancelación
-3. Se publica el evento en RabbitMQ
+| Evento | Exchange | Queue | Routing key | Cuándo se publica |
+|---|---|---|---|---|
+| Cita creada | `sigle.exchange` | `sigle.citas.creadas` | `citas.creada` | Al agendar una cita con éxito |
+| Cita cancelada | `sigle.exchange` | `sigle.citas.canceladas` | `citas.cancelada` | Al cancelar una cita |
 
-| Parámetro | Valor |
-|---|---|
-| Exchange | `sigle.exchange` |
-| Queue | `sigle.citas.canceladas` |
-| Routing key | `citas.cancelada` |
-| Formato | JSON |
+Ambos eventos se publican en formato JSON, después de que el cambio ya quedó guardado en la base de datos (no son transaccionales con la escritura en MySQL: si RabbitMQ está caído, la cita igual se crea/cancela, solo no se genera la notificación).
+
+**Payload de `citas.creada`:**
+```json
+{
+  "citaId": 1,
+  "pacienteId": 1,
+  "listaEsperaId": 3,
+  "especialidad": "Cardiología",
+  "fechaHora": "2025-05-20T09:30:00",
+  "medicoNombre": "Dr. Pérez"
+}
+```
+
+**Payload de `citas.cancelada`:**
+```json
+{
+  "citaId": 1,
+  "pacienteId": 1,
+  "listaEsperaId": 3,
+  "motivo": "El paciente no puede asistir"
+}
+```
 
 ## Tests
 
 ```bash
-mvn test
+pnpm test
 ```
 
-Incluye tests unitarios (Mockito) para `CitaService` y `MedicoService`, y tests de integración (`MockMvc`) para `CitaController` y `MedicoController`, usando H2 en memoria.
-
-### Tests con Docker
-
-```bash
-docker build -f Dockerfile.test -t citas-tests .
-docker run --rm citas-tests
-```
+Corre con Jest + Supertest. `citaService` y `medicoService` están mockeados en los tests de controllers, y el módulo `config/rabbitmq` se mockea completo (`connect`, `publishCancelacion`, `publishCreacion`) para no requerir una conexión real.
 
 ## Health
 
-```
-GET http://localhost:8082/actuator/health
-```
+GET http://localhost:10000/actuator/health
 
 ## Estructura
-
-```
-src/main/java/com/rednorte/sigle/citas_service/
+src/
+├── app.js                     # configuración de Express (testeable)
+├── index.js                   # entry point, conecta BD, RabbitMQ y arranca servidor
 ├── config/
-│   └── RabbitMQConfig.java
-├── controller/
-├── model/
-├── repository/
-└── service/
-```
+│   ├── database.js            # conexión Sequelize
+│   ├── eureka.js
+│   └── rabbitmq.js            # exchange, queues, publishCancelacion, publishCreacion
+├── controllers/
+│   ├── citaController.js
+│   └── medicoController.js
+├── models/
+│   ├── Cita.js
+│   ├── Cancelacion.js
+│   └── Medico.js
+├── routes/
+│   ├── citas.js
+│   └── medicos.js
+└── services/
+├── citaService.js          # agendar/cancelar publican eventos en RabbitMQ
+└── medicoService.js
+tests/
+└── citas.test.js
