@@ -4,6 +4,9 @@ const EXCHANGE = 'sigle.exchange';
 const QUEUE = 'sigle.citas.canceladas';
 const ROUTING_KEY = 'citas.cancelada';
 
+const QUEUE_CREADA = 'sigle.citas.creadas';
+const ROUTING_KEY_CREADA = 'citas.creada';
+
 let channel = null;
 
 async function connect() {
@@ -14,6 +17,8 @@ async function connect() {
     await channel.assertExchange(EXCHANGE, 'direct', { durable: true });
     await channel.assertQueue(QUEUE, { durable: true });
     await channel.bindQueue(QUEUE, EXCHANGE, ROUTING_KEY);
+    await channel.assertQueue(QUEUE_CREADA, { durable: true });
+    await channel.bindQueue(QUEUE_CREADA, EXCHANGE, ROUTING_KEY_CREADA);
     console.log('[RabbitMQ] Conectado y exchange configurado.');
 
     conn.on('close', () => {
@@ -41,4 +46,18 @@ function publishCancelacion(evento) {
   console.log('[RabbitMQ] Evento de cancelación publicado:', evento.citaId);
 }
 
-module.exports = { connect, publishCancelacion };
+function publishCreacion(evento) {
+  if (!channel) {
+    console.warn('[RabbitMQ] Sin canal disponible, no se publicó el evento.');
+    return;
+  }
+  channel.publish(
+    EXCHANGE,
+    ROUTING_KEY_CREADA,
+    Buffer.from(JSON.stringify(evento)),
+    { persistent: true }
+  );
+  console.log('[RabbitMQ] Evento de creación de cita publicado:', evento.citaId);
+}
+
+module.exports = { connect, publishCancelacion, publishCreacion };
