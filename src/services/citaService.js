@@ -107,23 +107,22 @@ const cancelarCita = async (id, motivo, canceladoPor) => {
   const cita = await Cita.findByPk(id);
   if (!cita) { const e = new Error('Cita no encontrada'); e.status = 404; throw e; }
 
+  const citaAntesDeCancelar = cita.toJSON();
   await cita.update({ estado: 'CANCELADA' });
 
   const cancelacion = await Cancelacion.create({
-    citaId: cita.id,
-    motivo,
-    canceladoPor,
-    fechaCancelacion: new Date(),
-    reasignado: false,
+    citaId: cita.id, motivo, canceladoPor, fechaCancelacion: new Date(), reasignado: false,
   });
 
-  // Publicar evento en RabbitMQ
-  publishCancelacion({
-    citaId: cita.id,
-    pacienteId: cita.pacienteId,
-    listaEsperaId: cita.listaEsperaId,
-    motivo,
-  });
+  publishCancelacion({ citaId: cita.id, pacienteId: cita.pacienteId, listaEsperaId: cita.listaEsperaId, motivo });
+
+  try {
+    const ofertaService = require('./ofertaService');
+    const oferta = await ofertaService.buscarYOfertar(citaAntesDeCancelar);
+    if (oferta) await cancelacion.update({ reasignado: true });
+  } catch (err) {
+    console.error('[CancelarCita] No se pudo iniciar la reasignación automática:', err.message);
+  }
 
   return cancelacion;
 };

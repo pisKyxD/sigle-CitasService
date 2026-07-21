@@ -5,7 +5,9 @@ const app = require('./app');
 const sequelize = require('./config/database');
 const { connect } = require('./config/rabbitmq');
 const eurekaClient = require('./config/eureka');
+const { iniciarJobExpiracionOfertas } = require('./jobs/expiracionOfertas');
 
+require('./models/OfertaCupo');
 require('./models/Medico');
 require('./models/Cita');
 require('./models/Cancelacion');
@@ -18,6 +20,7 @@ sequelize.sync({ force: false })
     connect();
     app.listen(PORT, () => {
       console.log(`[Server] citas-service corriendo en puerto ${PORT}`);
+      iniciarJobExpiracionOfertas();
       eurekaClient.start((error) => {
         if (error) {
           console.error('[Eureka] Error al registrar:', error);

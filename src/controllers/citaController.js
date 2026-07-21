@@ -58,7 +58,20 @@ const remove = async (req, res, next) => {
   try { await service.remove(req.params.id); res.json({ message: 'Cita eliminada' }); } catch (e) { next(e); }
 };
 
+const ofertaService = require('../services/ofertaService');
+
+const getOferta = async (req, res, next) => {
+  try { res.json(await ofertaService.getById(req.params.id)); } catch (e) { next(e); }
+};
+const confirmarOferta = async (req, res, next) => {
+  try { res.json(await ofertaService.confirmar(req.params.id)); } catch (e) { next(e); }
+};
+const rechazarOferta = async (req, res, next) => {
+  try { res.json(await ofertaService.rechazar(req.params.id)); } catch (e) { next(e); }
+};
+
 module.exports = {
-  getAll, getById, getByPacienteId, getByPacienteIdPaginado,
-  getByMedicoId, getHorasOcupadas, agendarCita, update, cancelarCita, remove,
+  getAll, getById, getByPacienteId, getByPacienteIdPaginado, getByMedicoId,
+  getHorasOcupadas, agendarCita, update, cancelarCita, remove,
+  getOferta, confirmarOferta, rechazarOferta,
 };
