@@ -7,6 +7,9 @@ const ROUTING_KEY = 'citas.cancelada';
 const QUEUE_CREADA = 'sigle.citas.creadas';
 const ROUTING_KEY_CREADA = 'citas.creada';
 
+const QUEUE_OFERTA = 'sigle.citas.ofertas';
+const ROUTING_KEY_OFERTA = 'citas.oferta_creada';
+
 let channel = null;
 
 async function connect() {
@@ -19,6 +22,8 @@ async function connect() {
     await channel.bindQueue(QUEUE, EXCHANGE, ROUTING_KEY);
     await channel.assertQueue(QUEUE_CREADA, { durable: true });
     await channel.bindQueue(QUEUE_CREADA, EXCHANGE, ROUTING_KEY_CREADA);
+    await channel.assertQueue(QUEUE_OFERTA, { durable: true });
+    await channel.bindQueue(QUEUE_OFERTA, EXCHANGE, ROUTING_KEY_OFERTA);
     console.log('[RabbitMQ] Conectado y exchange configurado.');
 
     conn.on('close', () => {
@@ -60,4 +65,10 @@ function publishCreacion(evento) {
   console.log('[RabbitMQ] Evento de creación de cita publicado:', evento.citaId);
 }
 
-module.exports = { connect, publishCancelacion, publishCreacion };
+function publishOfertaCreada(evento) {
+  if (!channel) { console.warn('[RabbitMQ] Sin canal disponible.'); return; }
+  channel.publish(EXCHANGE, ROUTING_KEY_OFERTA, Buffer.from(JSON.stringify(evento)), { persistent: true });
+  console.log('[RabbitMQ] Evento de oferta publicado:', evento.ofertaId);
+}
+
+module.exports = { connect, publishCancelacion, publishCreacion, publishOfertaCreada };
